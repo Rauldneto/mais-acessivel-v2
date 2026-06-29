@@ -2085,7 +2085,7 @@ function renderAnaliseCredito(){
             if(valorSolicNum>=15000) condicoesTxt+=' Compra acima de R$15.000: indicar Serasa antes de fechar.';
           } else if(vStatus==='RESSALVAS'){
             vereditoLabel='⚠️ ATENÇÃO — Venda com 55% de entrada + boleto ou PIX';
-            condicoesTxt='Condição: 55% de entrada + saldo em boleto ou PIX.';
+            condicoesTxt='Condição padrão: 55% de entrada (PIX/dinheiro) + saldo no boleto.';
             if(valorSolicNum>=15000) condicoesTxt+=' Compra acima de R$15.000: indicar Serasa antes de fechar.';
           } else {
             vereditoLabel='❌ NEGADO — Somente à vista (PIX ou dinheiro)';
@@ -2104,7 +2104,8 @@ function renderAnaliseCredito(){
           if(motivos_neg.length) motivoHtml+='<div style="margin-top:6px;font-size:.82em;"><strong>🔴 Pontos negativos:</strong> '+motivos_neg.join(' · ')+'</div>';
           if(motivos_atencao.length) motivoHtml+='<div style="margin-top:4px;font-size:.82em;"><strong>🟡 Pontos de atenção:</strong> '+motivos_atencao.join(' · ')+'</div>';
           if(motivos_pos.length) motivoHtml+='<div style="margin-top:4px;font-size:.82em;"><strong>🟢 Pontos positivos:</strong> '+motivos_pos.join(' · ')+'</div>';
-          motivoHtml+='<div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(0,0,0,.12);font-size:.88em;font-weight:700;">📋 '+condicoesTxt+'</div>';
+          var _extraInsistencia=(vStatus==='RESSALVAS'?'<div style="margin-top:6px;padding:8px 10px;background:rgba(0,0,0,.07);border-radius:6px;font-size:.84em;line-height:1.5;">🧾 <strong>Se o cliente insistir em faturamento (NF parcelada):</strong> 60% + frete à vista (PIX/dinheiro) + saldo no boleto em parcelas a avaliar.</div>':'');
+          motivoHtml+='<div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(0,0,0,.12);font-size:.88em;font-weight:700;">📋 '+condicoesTxt+'</div>'+_extraInsistencia;
           vDiv.innerHTML='<div class="ac-veredito-titulo">'+vCfg.icone+' '+vCfg.label+'</div>'+motivoHtml;
           iaBody.appendChild(vDiv);
 
