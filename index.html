@@ -3116,12 +3116,32 @@ function buildManTable(){
       '<td style="font-size:11px;font-weight:600;white-space:nowrap;color:'+rTipColor+'">'+rTipo+'</td>'+
       '<td style="text-align:center">'+(rIsTri?'<span style="color:#059669;font-weight:700;font-size:14px">✓</span>':'')+'</td>';
     tr.appendChild(buildPhoneCell(r.tel, r.nome));
-    function mkTdInp(val,w,type,field){
+    var _fields=['cotacao','prazo','valor','outros','credito','lucro'];
+    function mkTdInp(val,w,type,fld){
       var td=document.createElement('td');
       var el=document.createElement('input'); el.className='inp'; el.value=val||''; el.style.width=w+'px'; el.style.fontSize='11px';
       if(type) el.type=type;
-      el.oninput=function(){STATE.manRows[i][field]=this.value;};
-      el.onblur=function(){STATE.manRows[i][field]=this.value; rebuildManRow(i);};
+      el.setAttribute('data-row',i); el.setAttribute('data-field',fld);
+      el.oninput=function(){STATE.manRows[i][fld]=this.value;};
+      el.onblur=function(){STATE.manRows[i][fld]=this.value; rebuildManRow(i);};
+      el.onkeydown=function(e){
+        if(e.key==='Tab'){
+          e.preventDefault();
+          var curFieldIdx=_fields.indexOf(fld);
+          var nextField, nextRow=i;
+          if(!e.shiftKey){
+            if(curFieldIdx<_fields.length-1){ nextField=_fields[curFieldIdx+1]; }
+            else { nextField=_fields[0]; nextRow=i+1; }
+          } else {
+            if(curFieldIdx>0){ nextField=_fields[curFieldIdx-1]; }
+            else { nextField=_fields[_fields.length-1]; nextRow=i-1; }
+          }
+          if(nextRow>=0 && nextRow<STATE.manRows.length){
+            var nextEl=document.querySelector('[data-row="'+nextRow+'"][data-field="'+nextField+'"]');
+            if(nextEl){ nextEl.focus(); nextEl.select(); }
+          }
+        }
+      };
       td.appendChild(el); return td;
     }
     tr.appendChild(mkTdInp(r.cotacao,82,'text','cotacao'));
