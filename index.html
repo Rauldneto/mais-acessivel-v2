@@ -1233,7 +1233,33 @@ function renderAnaliseCredito(){
     btnUpload.onclick=function(){fileInp.click();};
     var uploadStatus=el('span','ac-upload-status','Nenhum arquivo selecionado.');
     uploadRow.appendChild(btnUpload);uploadRow.appendChild(fileInp);uploadRow.appendChild(uploadStatus);
+
+    // Badge "já carregado" — aparece se há texto salvo de sessão anterior
+    var badgeJaCarregado=document.createElement('span');
+    badgeJaCarregado.style.cssText='display:none;background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:5px;font-size:11px;font-weight:700;padding:3px 9px;margin-left:6px;white-space:nowrap;';
+    badgeJaCarregado.textContent='✅ Já carregado anteriormente';
+    uploadRow.appendChild(badgeJaCarregado);
+
     uploadCard.appendChild(uploadRow);
+
+    // Verifica se já há texto salvo (carregado do histórico)
+    function atualizarBadge(){
+      var textoAtual = window[varName] || '';
+      if(textoAtual){
+        badgeJaCarregado.style.display='inline-block';
+        uploadCard.classList.add('has-file');
+        if(uploadStatus.textContent==='Nenhum arquivo selecionado.'){
+          uploadStatus.textContent='✅ Documento já carregado em sessão anterior ('+textoAtual.length+' car.).';
+          uploadStatus.className='ac-upload-status ok';
+        }
+      } else {
+        badgeJaCarregado.style.display='none';
+        uploadCard.classList.remove('has-file');
+      }
+    }
+    // Checa imediatamente e também após 300ms (aguarda restauração do histórico)
+    atualizarBadge();
+    setTimeout(atualizarBadge, 350);
 
     fileInp.addEventListener('change', async function(){
       var file=fileInp.files[0];
@@ -1254,14 +1280,25 @@ function renderAnaliseCredito(){
         textoCompleto=textoCompleto.trim();
         if(!textoCompleto){throw new Error('Não foi possível extrair texto do PDF (pode ser um PDF escaneado/imagem).');}
         window[varName] = textoCompleto.substring(0,8000);
+        // Salva também no ultimoResultado para persistência
+        if(AC.ultimoResultado){
+          var mapVar={'_AC_contratoTexto':'snapshotContratoTexto','_AC_imovelTexto':'snapshotImovelTexto','_AC_socioDocTexto':'snapshotSocioDocTexto'};
+          if(mapVar[varName]) AC.ultimoResultado[mapVar[varName]]=window[varName];
+        }
         uploadCard.classList.add('has-file');
-        uploadStatus.textContent='✅ '+file.name+' — texto extraído ('+textoCompleto.length+' caracteres).';
+        badgeJaCarregado.style.display='none'; // esconde badge pois agora é o arquivo atual
+        uploadStatus.textContent='✅ '+file.name+' — texto extraído ('+textoCompleto.length+' car.).';
         uploadStatus.className='ac-upload-status ok';
         var btnRemove=document.createElement('button');
         btnRemove.className='ac-upload-remove';btnRemove.textContent='Remover';btnRemove.type='button';
         btnRemove.onclick=function(){
           window[varName]='';fileInp.value='';
+          if(AC.ultimoResultado){
+            var mapVar2={'_AC_contratoTexto':'snapshotContratoTexto','_AC_imovelTexto':'snapshotImovelTexto','_AC_socioDocTexto':'snapshotSocioDocTexto'};
+            if(mapVar2[varName]) AC.ultimoResultado[mapVar2[varName]]='';
+          }
           uploadCard.classList.remove('has-file');
+          badgeJaCarregado.style.display='none';
           uploadStatus.textContent='Nenhum arquivo selecionado.';uploadStatus.className='ac-upload-status';
           btnRemove.remove();
         };
@@ -1581,7 +1618,20 @@ function renderAnaliseCredito(){
         div.appendChild(statusSpan);
         containerEl.appendChild(div);
 
-        function setStatus(status){
+        // Estilos visuais dos botões conforme estado
+        function aplicarEstilosBotoes(status){
+          if(status==='CONFERE'){
+            btnOk.style.cssText='opacity:1;font-weight:700;box-shadow:0 0 0 2px #166534;filter:none;';
+            btnNok.style.cssText='opacity:0.35;filter:grayscale(60%);font-weight:400;';
+          } else if(status==='NAO_CONFERE'){
+            btnNok.style.cssText='opacity:1;font-weight:700;box-shadow:0 0 0 2px #991b1b;filter:none;';
+            btnOk.style.cssText='opacity:0.35;filter:grayscale(60%);font-weight:400;';
+          } else {
+            btnOk.style.cssText='';btnNok.style.cssText='';
+          }
+        }
+
+        function setStatus(status, disparaIA){
           AC.confirmacoesManuais = AC.confirmacoesManuais || {};
           AC.confirmacoesManuais[chave] = status;
           if(status==='CONFERE'){
@@ -1595,19 +1645,21 @@ function renderAnaliseCredito(){
             AC.ultimoResultado.confirmacoesManuais = AC.ultimoResultado.confirmacoesManuais || {};
             AC.ultimoResultado.confirmacoesManuais[chaveBase] = status;
           }
+          aplicarEstilosBotoes(status);
+          // Refaz parecer completo da IA ao marcar (se disparaIA=true)
+          if(disparaIA){
+            var raw=(AC.cliente.cpfcnpj||'').replace(/\D/g,'');
+            if(raw.length===14){
+              // Pequeno delay para o estado ser salvo antes
+              setTimeout(function(){ buscarCNPJ(raw); }, 80);
+            }
+          }
         }
-        btnOk.onclick=function(){
-          setStatus('CONFERE');
-          var raw=(AC.cliente.cpfcnpj||'').replace(/\D/g,'');
-          if(raw.length===14) buscarCNPJ(raw);
-        };
-        btnNok.onclick=function(){
-          setStatus('NAO_CONFERE');
-          var raw=(AC.cliente.cpfcnpj||'').replace(/\D/g,'');
-          if(raw.length===14) buscarCNPJ(raw);
-        };
-        var statusSalvo = (AC.confirmacoesManuais||{})[chave];
-        if(statusSalvo) setStatus(statusSalvo);
+        btnOk.onclick=function(){ setStatus('CONFERE', true); };
+        btnNok.onclick=function(){ setStatus('NAO_CONFERE', true); };
+        var statusSalvo = (AC.confirmacoesManuais||{})[chave]
+          || ((AC.ultimoResultado&&AC.ultimoResultado.confirmacoesManuais)||{})[chaveBase];
+        if(statusSalvo) setStatus(statusSalvo, false);
         return chave;
       }
 
