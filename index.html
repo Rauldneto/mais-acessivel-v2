@@ -1103,6 +1103,159 @@ function renderNavCredito(){
   return nav;
 }
 
+// ===== IMPRIMIR ANALISE DE CREDITO =====
+function gerarImpressaoAC(){
+  var AC=window._AC||{};
+  var cli=AC.cliente||{};
+  var reg=(AC.ultimoResultado&&AC.ultimoResultado.registro)||{};
+  var conf=AC.confirmacoesManuais||{};
+  var cnpjLimpo=(cli.cpfcnpj||'').replace(/\D/g,'');
+  function ck(k){ return conf[cnpjLimpo+'_'+k]||conf[k]||''; }
+  function st(v){ return v==='CONFERE'?'[OK] Confere':v==='NAO_CONFERE'?'[X] Nao confere':'[-] Nao verificado'; }
+  function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  var dadosExport={v:2,cliente:cli,fornecedores:AC.fornecedores||[],limitesolicitado:AC.limitesolicitado||'',confirmacoesManuais:conf,snapshotContratoTexto:window._AC_contratoTexto||'',snapshotImovelTexto:window._AC_imovelTexto||'',snapshotSocioDocTexto:window._AC_socioDocTexto||'',registro:reg};
+  var jsonB64=btoa(unescape(encodeURIComponent(JSON.stringify(dadosExport))));
+  var forns=(AC.fornecedores||[]).filter(function(f){return f&&f.nome&&f.nome.trim();});
+  var refHtml='';
+  if(forns.length>0){
+    refHtml='<table class="ref-table"><thead><tr><th>Fornecedor</th><th>Tempo</th><th>Limite</th><th>Paga em dia</th><th>Recomenda</th></tr></thead><tbody>';
+    forns.forEach(function(f){
+      refHtml+='<tr><td>'+esc(f.nome)+'</td><td>'+esc(f.tempocliente||'-')+'</td><td>R$ '+esc(f.limite||'-')+'</td><td>'+(f.pagaemdia==='sim'?'Sim':f.pagaemdia==='quase'?'Quase':f.pagaemdia==='nao'?'Nao':'-')+'</td><td>'+(f.recomenda==='sim'?'Sim':f.recomenda==='sim-ressalvas'?'Ressalvas':f.recomenda==='nao'?'Nao':'-')+'</td></tr>';
+    });
+    refHtml+='</tbody></table>';
+  } else { refHtml='<p class="muted">Nenhuma referencia preenchida.</p>'; }
+  var veredito=reg.veredito||'';
+  var verCls=veredito==='RECOMENDADO'?'verd-ok':veredito==='RESSALVAS'?'verd-warn':'verd-neg';
+  var verLabel=veredito==='RECOMENDADO'?'APROVADO':veredito==='RESSALVAS'?'ATENCAO':veredito==='NAO_RECOMENDADO'?'NEGADO':'Nao calculado';
+  var parecer=(reg.parecerResumo||'').replace(/\n/g,'<br>');
+  var hoje=new Date().toLocaleString('pt-BR');
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Analise Credito - '+esc(cli.nome||cli.cpfcnpj||'')+'</title>'
+    +'<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;font-size:11px;color:#1a1a1a;padding:20px;}'
+    +'h1{font-size:15px;border-bottom:2px solid #d97706;padding-bottom:6px;margin-bottom:12px;}'
+    +'h2{font-size:12px;color:#92400e;text-transform:uppercase;margin:14px 0 6px;border-left:3px solid #d97706;padding-left:7px;}'
+    +'.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:8px;}'
+    +'.field{margin-bottom:4px;}.label{font-size:9px;color:#6b7280;text-transform:uppercase;font-weight:700;}.value{font-size:11px;}'
+    +'.check-row{display:flex;justify-content:space-between;padding:4px 8px;border-bottom:1px solid #f3f4f6;font-size:11px;}'
+    +'.check-row:nth-child(even){background:#fafaf8;}'
+    +'.verd-ok{background:#dcfce7;border:2px solid #16a34a;border-radius:8px;padding:10px 14px;margin:10px 0;text-align:center;font-size:13px;font-weight:700;color:#166534;}'
+    +'.verd-warn{background:#fef9c3;border:2px solid #ca8a04;border-radius:8px;padding:10px 14px;margin:10px 0;text-align:center;font-size:13px;font-weight:700;color:#854d0e;}'
+    +'.verd-neg{background:#fee2e2;border:2px solid #dc2626;border-radius:8px;padding:10px 14px;margin:10px 0;text-align:center;font-size:13px;font-weight:700;color:#991b1b;}'
+    +'.parecer{background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px;font-size:11px;line-height:1.6;margin-bottom:8px;}'
+    +'.ref-table{width:100%;border-collapse:collapse;font-size:10px;}.ref-table th{background:#f3f4f6;padding:4px 6px;text-align:left;border:1px solid #e5e7eb;}.ref-table td{padding:4px 6px;border:1px solid #e5e7eb;}'
+    +'.muted{color:#6b7280;font-style:italic;font-size:10px;}.footer{margin-top:16px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:9px;color:#9ca3af;}'
+    +'.hidden-data{font-size:1px;color:white;line-height:0;overflow:hidden;height:1px;}'
+    +'@media print{body{padding:10px;}@page{margin:1cm;}}</style></head><body>'
+    +'<h1>Analise de Credito - '+esc(cli.fantasia||cli.nome||'')+'</h1>'
+    +'<div class="grid2">'
+    +'<div class="field"><div class="label">CNPJ</div><div class="value">'+esc(cli.cpfcnpj||'-')+'</div></div>'
+    +'<div class="field"><div class="label">Razao Social</div><div class="value">'+esc(cli.nome||'-')+'</div></div>'
+    +'<div class="field"><div class="label">Situacao</div><div class="value">'+esc(cli.situacao||'-')+'</div></div>'
+    +'<div class="field"><div class="label">Abertura</div><div class="value">'+esc(cli.abertura||'-')+'</div></div>'
+    +'<div class="field"><div class="label">Socio</div><div class="value">'+esc(cli.socios||'-')+'</div></div>'
+    +'<div class="field"><div class="label">Endereco</div><div class="value">'+esc(cli.endereco||'-')+'</div></div>'
+    +'<div class="field"><div class="label">Valor Pretendido</div><div class="value">R$ '+esc(AC.limitesolicitado||'-')+'</div></div>'
+    +'<div class="field"><div class="label">Operador</div><div class="value">'+esc(reg.operador||'-')+'</div></div>'
+    +'</div>'
+    +'<h2>Verificacao Manual</h2><div>'
+    +'<div class="check-row"><span>Endereco no Google Maps</span><span>'+st(ck('endereco'))+'</span></div>'
+    +'<div class="check-row"><span>Empresa no Google</span><span>'+st(ck('empresaGoogle'))+'</span></div>'
+    +'<div class="check-row"><span>Empresa no Instagram</span><span>'+st(ck('empresaInstagram'))+'</span></div>'
+    +'<div class="check-row"><span>Empresa no Facebook</span><span>'+st(ck('empresaFacebook'))+'</span></div>'
+    +'<div class="check-row"><span>CENPROT (Protestos)</span><span>'+st(ck('cenprot'))+'</span></div>'
+    +'</div>'
+    +'<h2>Documentos</h2><div>'
+    +'<div class="check-row"><span>Contrato Social</span><span>'+(window._AC_contratoTexto?'Enviado':'Nao enviado')+'</span></div>'
+    +'<div class="check-row"><span>Comprovante Endereco / Contrato Locacao</span><span>'+(window._AC_imovelTexto?'Enviado (imovel: '+esc(reg.imovelStatus||'?')+')':'Nao enviado')+'</span></div>'
+    +'<div class="check-row"><span>Documento do Socio</span><span>'+(window._AC_socioDocTexto?'Enviado':'Nao enviado')+'</span></div>'
+    +'</div>'
+    +'<h2>Parecer Inteligente</h2><div class="parecer">'+parecer+'</div>'
+    +'<h2>Referencias Comerciais</h2>'+refHtml
+    +'<h2>Veredito Final</h2><div class="'+verCls+'">'+verLabel+'</div>'
+    +(reg.veredictoMotivo?'<p style="font-size:10px;color:#374151;margin-bottom:8px;">'+esc(reg.veredictoMotivo)+'</p>':'')
+    +'<div class="footer">Gerado em: '+hoje+' - MAIS ACESSIVEL - JDFER Comercio e Servicos Ltda</div>'
+    +'<div class="hidden-data" id="ac-export-data">ACDATA:'+jsonB64+':ACDATA</div>'
+    +'</body></html>';
+  var w=window.open('','_blank','width=900,height=700');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(function(){ w.print(); },600);
+}
+
+// ===== IMPORTAR ANALISE DE CREDITO DO PDF =====
+function importarAnaliseAC(file){
+  if(!file) return;
+  var statusEl=document.querySelector('.ac-cnpj-sticky-status');
+  if(statusEl){ statusEl.textContent='Lendo PDF...'; statusEl.style.color='#92400e'; }
+  var fr=new FileReader();
+  fr.onload=function(e){
+    try{
+      if(typeof pdfjsLib==='undefined') throw new Error('Biblioteca PDF nao carregou');
+      pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      pdfjsLib.getDocument({data:e.target.result}).promise.then(function(pdf){
+        var paginas=[];
+        for(var p=1;p<=pdf.numPages;p++) paginas.push(p);
+        return Promise.all(paginas.map(function(p){
+          return pdf.getPage(p).then(function(pg){
+            return pg.getTextContent().then(function(ct){
+              return ct.items.map(function(it){return it.str;}).join('');
+            });
+          });
+        }));
+      }).then(function(partes){
+        var textoTotal=partes.join('');
+        var m=textoTotal.match(/ACDATA:([A-Za-z0-9+\/=]+):ACDATA/);
+        if(!m||!m[1]) throw new Error('PDF nao reconhecido como exportado pelo sistema. Verifique se e um PDF gerado por esta plataforma.');
+        var json=JSON.parse(decodeURIComponent(escape(atob(m[1]))));
+        if(!json||json.v!==2) throw new Error('Versao do PDF incompativel.');
+        window._AC_contratoTexto=json.snapshotContratoTexto||'';
+        window._AC_imovelTexto=json.snapshotImovelTexto||'';
+        window._AC_socioDocTexto=json.snapshotSocioDocTexto||'';
+        var cli=json.cliente||{};
+        cli._nomeVerif=cli._nomeVerif||cli.fantasia||cli.nome||'';
+        cli._endVerif=cli._endVerif||cli.endereco||'';
+        var cnpjLimpo2=((json.registro&&json.registro.cnpjChave)||cli.cpfcnpj||'').replace(/\D/g,'');
+        var confBase=json.confirmacoesManuais||{};
+        var confRest={};
+        Object.keys(confBase).forEach(function(k){
+          confRest[k]=confBase[k];
+          if(k.indexOf(cnpjLimpo2)<0&&cnpjLimpo2) confRest[cnpjLimpo2+'_'+k]=confBase[k];
+        });
+        window._AC={
+          cliente:cli,
+          fornecedores:json.fornecedores||[{},{},{}],
+          limitesolicitado:json.limitesolicitado||'',
+          exibirResumo:false,
+          confirmacoesManuais:confRest,
+          ultimoResultado:{
+            cnpj:cnpjLimpo2,
+            registro:json.registro||{},
+            iaBodyHTML:(json.registro&&json.registro.snapshotIaBodyHTML)||'',
+            iaLinksHTML:(json.registro&&json.registro.snapshotIaLinksHTML)||'',
+            socioLinksHTML:(json.registro&&json.registro.snapshotSocioLinksHTML)||'',
+            stickyStatusHTML:(json.registro&&json.registro.snapshotStickyStatusHTML)||'',
+            stickyStatusColor:(json.registro&&json.registro.snapshotStickyStatusColor)||''
+          }
+        };
+        STATE.tabCredito='analise';
+        render();
+        [150,400].forEach(function(t){
+          setTimeout(function(){
+            if(typeof window._montarVerificacoes==='function'&&cli._nomeVerif&&cnpjLimpo2)
+              window._montarVerificacoes(cli._nomeVerif,cnpjLimpo2,cli._endVerif||'');
+          },t);
+        });
+        if(statusEl){ statusEl.textContent='PDF importado com sucesso!'; statusEl.style.color='#166534'; }
+      }).catch(function(err){
+        if(statusEl){ statusEl.textContent='Erro: '+err.message; statusEl.style.color='#991b1b'; }
+      });
+    }catch(err){
+      if(statusEl){ statusEl.textContent='Erro: '+err.message; statusEl.style.color='#991b1b'; }
+    }
+  };
+  fr.readAsArrayBuffer(file);
+}
+
+
 function renderAnaliseCredito(){
   if(!window._AC) window._AC={cliente:{},fornecedores:[{},{},{}],limitesolicitado:'',exibirResumo:false};
   var AC=window._AC;
@@ -1157,6 +1310,20 @@ function renderAnaliseCredito(){
   sticky.appendChild(btnSalvar);
   var salvarMsg=el('span','ac-cnpj-sticky-status','');
   sticky.appendChild(salvarMsg);
+  var btnImprimirPDF=el('button','ac-cnpj-sticky-btn','🖨️ Imprimir PDF');
+  btnImprimirPDF.style.cssText='background:#059669;';
+  btnImprimirPDF.disabled=!(AC.ultimoResultado&&AC.ultimoResultado.registro);
+  if(btnImprimirPDF.disabled) btnImprimirPDF.style.opacity='.5';
+  btnImprimirPDF.onclick=function(){ gerarImpressaoAC(); };
+  sticky.appendChild(btnImprimirPDF);
+  var btnImportarPDF=el('button','ac-cnpj-sticky-btn','📥 Importar PDF');
+  btnImportarPDF.style.cssText='background:#7c3aed;';
+  var fileImportInp=document.createElement('input');
+  fileImportInp.type='file';fileImportInp.accept='application/pdf';fileImportInp.style.display='none';
+  fileImportInp.onchange=function(){ importarAnaliseAC(fileImportInp.files[0]); };
+  btnImportarPDF.onclick=function(){ fileImportInp.click(); };
+  sticky.appendChild(btnImportarPDF);
+  sticky.appendChild(fileImportInp);
   wrap.appendChild(sticky);
 
   // ======= CARD RESUMO IA =======
@@ -2248,6 +2415,7 @@ function renderAnaliseCredito(){
           stickyStatusColor: stickyStatus.style.color
         };
         btnSalvar.disabled=false;btnSalvar.style.opacity='1';btnSalvar.textContent='ð¾ Salvar';
+        if(typeof btnImprimirPDF!=='undefined'){btnImprimirPDF.disabled=false;btnImprimirPDF.style.opacity='1';}
         fase2Wrap.style.display='block';
         atualizarAvisoFase2();
       }).catch(function(){iaBody.innerHTML='<div class="ac-ia-loading">NÃ£o foi possÃ­vel conectar com a IA. Tente novamente.</div>';});
