@@ -1315,11 +1315,38 @@ function renderAnaliseCredito(){
 
   // ======= VERIFICAÇÃO MANUAL: ENDEREÇO, EMPRESA NO GOOGLE, EMPRESA NO INSTAGRAM =======
   var verificacoesDiv=el('div','');
-  // Nota: verificacoesDiv é populado dinamicamente em buscarCNPJ (via criarLinkComConfirmacao)
-  // Se há resultado carregado (ex: após "Carregar" do histórico), a seção será populada
-  // quando buscarCNPJ rodar com o CNPJ restaurado. NÃO restauramos via innerHTML para
-  // preservar os event listeners dos botões Confere/Não Confere.
   fase2Wrap.appendChild(verificacoesDiv);
+
+  window._montarVerificacoes = function(nomeEmpresa, cnpjVerif, enderecoStr){
+    if(!nomeEmpresa || !cnpjVerif) return;
+    verificacoesDiv.innerHTML='';
+    var _vTit=el('div','');
+    _vTit.innerHTML='<h3 style="font-size:14px;color:#1a1a1a;margin:0 0 4px;">?? Verificação Manual</h3><p style="font-size:12px;color:#888;margin-bottom:10px;">Confira no link e marque se confere com a empresa buscada.</p>';
+    verificacoesDiv.appendChild(_vTit);
+    var _vBox=el('div','ac-upload-card');
+    if(enderecoStr){
+      var _mUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(enderecoStr);
+      criarLinkComConfirmacao(_vBox,'endereco','??️ Ver endereço no Google Maps',_mUrl);
+    }
+    var _nEnc=encodeURIComponent(nomeEmpresa);
+    criarLinkComConfirmacao(_vBox,'empresaGoogle','???? Empresa no Google','https://www.google.com/search?q='+_nEnc+'+'+cnpjVerif);
+    criarLinkComConfirmacao(_vBox,'empresaInstagram','???? Empresa no Instagram','https://www.instagram.com/explore/search/keyword/?q='+_nEnc);
+    criarLinkComConfirmacao(_vBox,'empresaFacebook','???? Empresa no Facebook','https://www.facebook.com/search/top?q='+_nEnc);
+    criarLinkComConfirmacao(_vBox,'cenprot','??️ Consultar protesto no CENPROT (use seu certificado digital, se solicitado)','https://www.pesquisaprotesto.com.br/',{
+      txtOk:'✅ Sem protesto', txtNok:'❌ Há protesto',
+      txtStatusOk:'✅ Confirmado: sem protesto no CENPROT.', txtStatusNok:'❌ Confirmado: HÁ protesto no CENPROT.'
+    });
+    verificacoesDiv.appendChild(_vBox);
+  };
+
+  // Restaura botões imediatamente se há dados em memória (carregado do histórico)
+  if(AC.ultimoResultado && AC.ultimoResultado.cnpj){
+    var _cli0=AC.cliente||{};
+    var _nm0=_cli0._nomeVerif||_cli0.fantasia||_cli0.nome||'';
+    var _cnpj0=(AC.ultimoResultado.cnpj||'').replace(/\D/g,'');
+    var _end0=_cli0._endVerif||_cli0.endereco||'';
+    if(_nm0 && _cnpj0) setTimeout(function(){ window._montarVerificacoes(_nm0,_cnpj0,_end0); },50);
+  }
 
   // ======= UPLOAD CONTRATO SOCIAL ALTERADO (PDF) =======
   fase2Wrap.appendChild(criarUploadPdf('📎 Contrato Social Alterado (PDF, opcional):','_AC_contratoTexto'));
@@ -1661,26 +1688,11 @@ function renderAnaliseCredito(){
         return chave;
       }
 
-      // Monta a seção de verificação manual (endereço + empresa) na Fase 2
-      verificacoesDiv.innerHTML='';
-      var verifTitulo=el('div','');
-      verifTitulo.innerHTML='<h3 style="font-size:14px;color:#1a1a1a;margin:0 0 4px;">🔎 Verificação Manual</h3><p style="font-size:12px;color:#888;margin-bottom:10px;">Confira no link e marque se confere com a empresa buscada.</p>';
-      verificacoesDiv.appendChild(verifTitulo);
-      var verifBox=el('div','ac-upload-card');
-      if(mapsQuery){
-        criarLinkComConfirmacao(verifBox,'endereco','🗺️ Ver endereço no Google Maps',mapsUrl);
-      }
+      // Monta botões de verificação via função global (dados já disponíveis do response)
       var nomeEmpresaVerif=data.fantasia||data.nome;
-      var nEncEmpresaVerif=encodeURIComponent(nomeEmpresaVerif);
-      criarLinkComConfirmacao(verifBox,'empresaGoogle','🏢🔍 Empresa no Google','https://www.google.com/search?q='+nEncEmpresaVerif+'+'+cnpj);
-      criarLinkComConfirmacao(verifBox,'empresaInstagram','🏢📷 Empresa no Instagram','https://www.instagram.com/explore/search/keyword/?q='+nEncEmpresaVerif);
-      criarLinkComConfirmacao(verifBox,'empresaFacebook','🏢📘 Empresa no Facebook','https://www.facebook.com/search/top?q='+nEncEmpresaVerif);
-      criarLinkComConfirmacao(verifBox,'cenprot','🏛️ Consultar protesto no CENPROT (use seu certificado digital, se solicitado)','https://www.pesquisaprotesto.com.br/',{
-        txtOk:'✅ Sem protesto', txtNok:'❌ Há protesto',
-        txtStatusOk:'✅ Confirmado: sem protesto no CENPROT.', txtStatusNok:'❌ Confirmado: HÁ protesto no CENPROT.'
-      });
-      verificacoesDiv.appendChild(verifBox);
-      if(AC.ultimoResultado) AC.ultimoResultado.verificacoesHTML = verificacoesDiv.innerHTML;
+      AC.cliente._nomeVerif=nomeEmpresaVerif;
+      AC.cliente._endVerif=mapsQuery;
+      window._montarVerificacoes(nomeEmpresaVerif, cnpj, mapsQuery);
 
       if(d.socios&&d.socios.length>0){
         var nomeSocioIA=d.socios[0].nome;
@@ -1831,7 +1843,7 @@ function renderAnaliseCredito(){
       // Expoe funcao para re-gerar apenas o parecer sem refazer consulta a Receita
       window._gerarParecerIA = function(){
         var iaBodyEl = document.querySelector('.ac-ia-card > div:nth-child(2)');
-        if(iaBodyEl) iaBodyEl.innerHTML='<div class="ac-ia-loading">������ Atualizando parecer...</div>';
+        if(iaBodyEl) iaBodyEl.innerHTML='<div class="ac-ia-loading">������ Atualizando parecer...</div>';
         var raw2=(AC.cliente.cpfcnpj||'').replace(/\D/g,'');
         if(raw2.length===14) setTimeout(function(){ buscarCNPJ(raw2); }, 100);
       };
