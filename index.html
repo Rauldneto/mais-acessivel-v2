@@ -1729,7 +1729,14 @@ function renderAnaliseCredito(){
         prompt += '\n\nNenhuma referência comercial foi preenchida para esta análise. Mencione brevemente isso no parágrafo como uma lacuna relevante na análise (não foi possível avaliar o histórico de pagamento do cliente com outros fornecedores).\nAo final, em uma linha separada, adicione exatamente: [REFCOM:NAO_PREENCHIDO]';
       }
 
-      var enderecoStatusAtual = (AC.confirmacoesManuais||{})[fbHistChaveCnpj(cnpj)+'_endereco'];
+      function lerConfirmacao(chaveBase){
+        var longa=fbHistChaveCnpj(cnpj)+'_'+chaveBase;
+        return (AC.confirmacoesManuais||{})[longa]
+            || ((AC.ultimoResultado&&AC.ultimoResultado.confirmacoesManuais)||{})[chaveBase]
+            || ((AC.ultimoResultado&&AC.ultimoResultado.confirmacoesManuais)||{})[longa]
+            || undefined;
+      }
+      var enderecoStatusAtual = lerConfirmacao('endereco');
       if(enderecoStatusAtual==='CONFERE'){
         prompt += '\n\nO operador verificou pessoalmente o endereço da empresa no Google Maps e CONFIRMOU que o local confere com a existência da empresa. Considere isso como um ponto POSITIVO relevante.';
       } else if(enderecoStatusAtual==='NAO_CONFERE'){
@@ -1738,28 +1745,28 @@ function renderAnaliseCredito(){
         prompt += '\n\nO endereço da empresa ainda não foi verificado manualmente pelo operador no Google Maps. Mencione isso como uma verificação pendente, sem julgar como positivo ou negativo.';
       }
 
-      var empresaGoogleStatusAtual = (AC.confirmacoesManuais||{})[fbHistChaveCnpj(cnpj)+'_empresaGoogle'];
+      var empresaGoogleStatusAtual = lerConfirmacao('empresaGoogle');
       if(empresaGoogleStatusAtual==='CONFERE'){
         prompt += '\n\nO operador verificou a presença da empresa no Google e CONFIRMOU que os resultados condizem com a empresa em análise. Considere como ponto levemente positivo.';
       } else if(empresaGoogleStatusAtual==='NAO_CONFERE'){
         prompt += '\n\nO operador verificou a presença da empresa no Google e CONFIRMOU que NÃO encontrou resultados condizentes. Considere como ponto de atenção.';
       }
 
-      var empresaInstaStatusAtual = (AC.confirmacoesManuais||{})[fbHistChaveCnpj(cnpj)+'_empresaInstagram'];
+      var empresaInstaStatusAtual = lerConfirmacao('empresaInstagram');
       if(empresaInstaStatusAtual==='CONFERE'){
         prompt += '\n\nO operador verificou a presença da empresa no Instagram e CONFIRMOU que os resultados condizem com a empresa em análise. Considere como ponto levemente positivo.';
       } else if(empresaInstaStatusAtual==='NAO_CONFERE'){
         prompt += '\n\nO operador verificou a presença da empresa no Instagram e CONFIRMOU que NÃO encontrou resultados condizentes. Considere como ponto de atenção.';
       }
 
-      var empresaFbStatusAtual = (AC.confirmacoesManuais||{})[fbHistChaveCnpj(cnpj)+'_empresaFacebook'];
+      var empresaFbStatusAtual = lerConfirmacao('empresaFacebook');
       if(empresaFbStatusAtual==='CONFERE'){
         prompt += '\n\nO operador verificou a presença da empresa no Facebook e CONFIRMOU que os resultados condizem com a empresa em análise. Considere como ponto levemente positivo.';
       } else if(empresaFbStatusAtual==='NAO_CONFERE'){
         prompt += '\n\nO operador verificou a presença da empresa no Facebook e CONFIRMOU que NÃO encontrou resultados condizentes. Considere como ponto de atenção.';
       }
 
-      var cenprotStatusAtual = (AC.confirmacoesManuais||{})[fbHistChaveCnpj(cnpj)+'_cenprot'];
+      var cenprotStatusAtual = lerConfirmacao('cenprot');
       if(cenprotStatusAtual==='CONFERE'){
         prompt += '\n\nO operador consultou manualmente o CENPROT (Central Nacional de Protesto) e CONFIRMOU que NÃO há protestos em cartório para esta empresa. Considere isso como um ponto POSITIVO relevante.';
       } else if(cenprotStatusAtual==='NAO_CONFERE'){
@@ -2069,11 +2076,15 @@ function renderAnaliseCredito(){
           }
 
           // ---------- PONTOS POSITIVOS ADICIONAIS ----------
-          if(cenprotStatusAtual==='CONFERE') motivos_pos.push('CENPROT sem protestos confirmado');
-          if(cenprotStatusAtual==='NAO_CONFERE'){ vStatus='NAO_RECOMENDADO'; motivos_neg.push('Protesto em cartório confirmado no CENPROT'); }
-          if(enderecoStatusAtual==='CONFERE') motivos_pos.push('Endereço confirmado no Google Maps');
-          if(enderecoStatusAtual==='NAO_CONFERE'){ vStatus='NAO_RECOMENDADO'; motivos_neg.push('Endereço NÃO confere no Google Maps'); }
-          if(empresaGoogleStatusAtual==='CONFERE') motivos_pos.push('Empresa encontrada no Google');
+          // Rele os status de confirmação manual dentro do veredito (garante consistência)
+          var _cenp = lerConfirmacao ? lerConfirmacao('cenprot') : cenprotStatusAtual;
+          var _end  = lerConfirmacao ? lerConfirmacao('endereco') : enderecoStatusAtual;
+          var _goog = lerConfirmacao ? lerConfirmacao('empresaGoogle') : empresaGoogleStatusAtual;
+          if(_cenp==='CONFERE') motivos_pos.push('CENPROT sem protestos confirmado');
+          if(_cenp==='NAO_CONFERE'){ vStatus='NAO_RECOMENDADO'; motivos_neg.push('Protesto em cartório confirmado no CENPROT'); }
+          if(_end==='CONFERE') motivos_pos.push('Endereço confirmado no Google Maps');
+          if(_end==='NAO_CONFERE'){ vStatus='NAO_RECOMENDADO'; motivos_neg.push('Endereço NÃO confere no Google Maps'); }
+          if(_goog==='CONFERE') motivos_pos.push('Empresa encontrada no Google');
 
           // ---------- CONDIÇÕES DE VENDA ----------
           var valorSolicNum=parseFloat((AC.limitesolicitado||'0').replace(/[^0-9.,]/g,'').replace(',','.'));
