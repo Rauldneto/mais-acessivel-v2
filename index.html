@@ -1258,8 +1258,9 @@ function renderAnaliseCredito(){
       }
     }
     // Checa imediatamente e tambÃ©m apÃ³s 300ms (aguarda restauraÃ§Ã£o do histÃ³rico)
-    atualizarBadge();
-    setTimeout(atualizarBadge, 350);
+    setTimeout(atualizarBadge, 50);
+    setTimeout(atualizarBadge, 400);
+    setTimeout(atualizarBadge, 800);
 
     fileInp.addEventListener('change', async function(){
       var file=fileInp.files[0];
@@ -1384,6 +1385,10 @@ function renderAnaliseCredito(){
       var fornAtual = (AC.fornecedores||[]).filter(function(f){return f&&f.nome&&f.nome.trim();});
       AC.ultimoResultado.registro.snapshotFornecedores = AC.fornecedores;
       AC.ultimoResultado.registro.snapshotLimiteSolicitado = AC.limitesolicitado||'';
+      AC.ultimoResultado.registro.confirmacoesManuais = JSON.parse(JSON.stringify(AC.confirmacoesManuais||{}));
+      AC.ultimoResultado.registro.snapshotContratoTexto = window._AC_contratoTexto||'';
+      AC.ultimoResultado.registro.snapshotImovelTexto = window._AC_imovelTexto||'';
+      AC.ultimoResultado.registro.snapshotSocioDocTexto = window._AC_socioDocTexto||'';
       if(fornAtual.length>0 && AC.ultimoResultado.registro.refcomStatus==='NAO_PREENCHIDO'){
         AC.ultimoResultado.registro.refcomStatus = 'PREENCHIDO_SEM_SCORE';
       }
@@ -2230,7 +2235,8 @@ function renderAnaliseCredito(){
           snapshotStickyStatusColor: stickyStatus.style.color,
           snapshotContratoTexto: window._AC_contratoTexto||'',
           snapshotImovelTexto: window._AC_imovelTexto||'',
-          snapshotSocioDocTexto: window._AC_socioDocTexto||''
+          snapshotSocioDocTexto: window._AC_socioDocTexto||'',
+          confirmacoesManuais: JSON.parse(JSON.stringify(AC.confirmacoesManuais||{}))
         };
         AC.ultimoResultado = {
           cnpj: cnpj,
@@ -2346,12 +2352,23 @@ function renderHistoricoCredito(){
           var _cli = reg.snapshotCliente || {};
           _cli._nomeVerif = _cli._nomeVerif || _cli.fantasia || _cli.nome || '';
           _cli._endVerif  = _cli._endVerif  || _cli.endereco || '';
+          // Reconstroi confirmacoesManuais com chaves longas (cnpj_chave) para _criarLinkConfirmacao
+          var _confBase = reg.confirmacoesManuais || {};
+          var _cnpjLimpo2 = (reg.cnpjChave||'').replace(/\D/g,'');
+          var _confRestaurado = {};
+          Object.keys(_confBase).forEach(function(k){
+            _confRestaurado[k] = _confBase[k];
+            // Se a chave nao tem underscore com cnpj, adiciona versao longa tambem
+            if(k.indexOf(_cnpjLimpo2) < 0 && _cnpjLimpo2){
+              _confRestaurado[_cnpjLimpo2 + '_' + k] = _confBase[k];
+            }
+          });
           window._AC = {
             cliente: _cli,
             fornecedores: reg.snapshotFornecedores || [{},{},{}],
             limitesolicitado: reg.snapshotLimiteSolicitado || '',
             exibirResumo: false,
-            confirmacoesManuais: reg.confirmacoesManuais || {},
+            confirmacoesManuais: _confRestaurado,
             ultimoResultado: {
               cnpj: reg.cnpjChave,
               registro: reg,
