@@ -1315,14 +1315,16 @@ function renderAnaliseCredito(){
 
   // ======= VERIFICAÃÃO MANUAL: ENDEREÃO, EMPRESA NO GOOGLE, EMPRESA NO INSTAGRAM =======
   var verificacoesDiv=el('div','');
+  verificacoesDiv.id='ac-verificacoes-div';
   fase2Wrap.appendChild(verificacoesDiv);
 
   window._montarVerificacoes = function(nomeEmpresa, cnpjVerif, enderecoStr){
     if(!nomeEmpresa || !cnpjVerif) return;
-    verificacoesDiv.innerHTML='';
+    var _vDiv=document.getElementById('ac-verificacoes-div')||verificacoesDiv;
+    _vDiv.innerHTML='';
     var _vTit=el('div','');
     _vTit.innerHTML='<h3 style="font-size:14px;color:#1a1a1a;margin:0 0 4px;">&#128270; Verificação Manual</h3><p style="font-size:12px;color:#888;margin-bottom:10px;">Confira no link e marque se confere com a empresa buscada.</p>';
-    verificacoesDiv.appendChild(_vTit);
+    _vDiv.appendChild(_vTit);
     var _vBox=el('div','ac-upload-card');
     if(enderecoStr){
       var _mUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(enderecoStr);
@@ -1336,7 +1338,7 @@ function renderAnaliseCredito(){
       txtOk:'✅ Sem protesto', txtNok:'❌ Há protesto',
       txtStatusOk:'✅ Confirmado: sem protesto no CENPROT.', txtStatusNok:'❌ Confirmado: HÁ protesto no CENPROT.'
     },cnpjVerif);
-    verificacoesDiv.appendChild(_vBox);
+    _vDiv.appendChild(_vBox);
   };
 
   // Restaura botoes ao renderizar se ha dados do historico em memoria
@@ -1346,8 +1348,8 @@ function renderAnaliseCredito(){
     var _cnpj0=(AC.ultimoResultado.cnpj||'').replace(/\D/g,'');
     var _end0=_cli0._endVerif||_cli0.endereco||'';
     if(_nm0 && _cnpj0){
-      window._montarVerificacoes(_nm0,_cnpj0,_end0);
-      setTimeout(function(){ window._montarVerificacoes(_nm0,_cnpj0,_end0); },200);
+      setTimeout(function(){ window._montarVerificacoes(_nm0,_cnpj0,_end0); },10);
+      setTimeout(function(){ window._montarVerificacoes(_nm0,_cnpj0,_end0); },300);
     }
   }
 
