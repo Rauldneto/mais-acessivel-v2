@@ -1646,13 +1646,11 @@ function renderAnaliseCredito(){
             AC.ultimoResultado.confirmacoesManuais[chaveBase] = status;
           }
           aplicarEstilosBotoes(status);
-          // Refaz parecer completo da IA ao marcar (se disparaIA=true)
+          // Refaz apenas o Parecer da IA ao marcar (sem refazer consulta Receita)
           if(disparaIA){
-            var raw=(AC.cliente.cpfcnpj||'').replace(/\D/g,'');
-            if(raw.length===14){
-              // Pequeno delay para o estado ser salvo antes
-              setTimeout(function(){ buscarCNPJ(raw); }, 80);
-            }
+            setTimeout(function(){
+              if(typeof window._gerarParecerIA==='function') window._gerarParecerIA();
+            }, 80);
           }
         }
         btnOk.onclick=function(){ setStatus('CONFERE', true); };
@@ -1829,6 +1827,14 @@ function renderAnaliseCredito(){
 
       // ======= VEREDITO FINAL CONSOLIDADO =======
       prompt += '\n\nPor fim, com base em TODO o conjunto de informações acima (situação cadastral, tempo de empresa, estabilidade societária, imóvel da sede, verificação manual do endereço no mapa, documento do sócio, referências comerciais e demais pontos), dê um VEREDITO FINAL consolidado sobre recomendar ou não a venda a prazo/parcelada para este cliente. Use bom senso: pondere o conjunto, não reprove automaticamente por um único ponto fraco se o restante for forte, mas também não ignore problemas graves (ex: situação cadastral irregular, múltiplos documentos ausentes, referências muito negativas, endereço não confere no mapa).\nEscolha UMA das três opções: RECOMENDADO (perfil favorável, sem ressalvas relevantes), RESSALVAS (favorável mas com pontos de atenção que merecem cautela ou limite reduzido), ou NAO_RECOMENDADO (perfil desfavorável, risco elevado).\nAo final de tudo, em uma linha separada, adicione um marcador técnico EXATAMENTE neste formato: [VEREDITO:RECOMENDADO|motivo=texto curto de até 15 palavras] ou [VEREDITO:RESSALVAS|motivo=texto curto de até 15 palavras] ou [VEREDITO:NAO_RECOMENDADO|motivo=texto curto de até 15 palavras].';
+
+      // Expoe funcao para re-gerar apenas o parecer sem refazer consulta a Receita
+      window._gerarParecerIA = function(){
+        var iaBodyEl = document.querySelector('.ac-ia-card > div:nth-child(2)');
+        if(iaBodyEl) iaBodyEl.innerHTML='<div class="ac-ia-loading">������ Atualizando parecer...</div>';
+        var raw2=(AC.cliente.cpfcnpj||'').replace(/\D/g,'');
+        if(raw2.length===14) setTimeout(function(){ buscarCNPJ(raw2); }, 100);
+      };
 
       fbGetIAConfig().then(function(instrucoesExtra){
         var promptFinal=prompt;
