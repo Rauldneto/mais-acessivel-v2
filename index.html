@@ -1339,13 +1339,16 @@ function renderAnaliseCredito(){
     verificacoesDiv.appendChild(_vBox);
   };
 
-  // Restaura botÃµes imediatamente se hÃ¡ dados em memÃ³ria (carregado do histÃ³rico)
+  // Restaura botoes ao renderizar se ha dados do historico em memoria
   if(AC.ultimoResultado && AC.ultimoResultado.cnpj){
     var _cli0=AC.cliente||{};
     var _nm0=_cli0._nomeVerif||_cli0.fantasia||_cli0.nome||'';
     var _cnpj0=(AC.ultimoResultado.cnpj||'').replace(/\D/g,'');
     var _end0=_cli0._endVerif||_cli0.endereco||'';
-    if(_nm0 && _cnpj0) setTimeout(function(){ window._montarVerificacoes(_nm0,_cnpj0,_end0); },50);
+    if(_nm0 && _cnpj0){
+      window._montarVerificacoes(_nm0,_cnpj0,_end0);
+      setTimeout(function(){ window._montarVerificacoes(_nm0,_cnpj0,_end0); },200);
+    }
   }
 
   // ======= UPLOAD CONTRATO SOCIAL ALTERADO (PDF) =======
@@ -1836,8 +1839,9 @@ function renderAnaliseCredito(){
       // Expoe funcao para re-gerar apenas o parecer sem refazer consulta a Receita
       window._gerarParecerIA = function(){
         var iaBodyEl = document.querySelector('.ac-ia-card > div:nth-child(2)');
-        if(iaBodyEl) iaBodyEl.innerHTML='<div class="ac-ia-loading">ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Atualizando parecer...</div>';
+        if(iaBodyEl) iaBodyEl.innerHTML='<div class="ac-ia-loading">🤖 Atualizando parecer inteligente...</div>';
         var raw2=(AC.cliente.cpfcnpj||'').replace(/\D/g,'');
+        if(!raw2||raw2.length!==14) raw2=((AC.ultimoResultado&&AC.ultimoResultado.cnpj)||'').replace(/\D/g,'');
         if(raw2.length===14) setTimeout(function(){ buscarCNPJ(raw2); }, 100);
       };
 
@@ -2337,8 +2341,11 @@ function renderHistoricoCredito(){
           window._AC_contratoTexto = reg.snapshotContratoTexto || '';
           window._AC_imovelTexto = reg.snapshotImovelTexto || '';
           window._AC_socioDocTexto = reg.snapshotSocioDocTexto || '';
+          var _cli = reg.snapshotCliente || {};
+          _cli._nomeVerif = _cli._nomeVerif || _cli.fantasia || _cli.nome || '';
+          _cli._endVerif  = _cli._endVerif  || _cli.endereco || '';
           window._AC = {
-            cliente: reg.snapshotCliente || {},
+            cliente: _cli,
             fornecedores: reg.snapshotFornecedores || [{},{},{}],
             limitesolicitado: reg.snapshotLimiteSolicitado || '',
             exibirResumo: false,
@@ -2355,6 +2362,14 @@ function renderHistoricoCredito(){
           };
           STATE.tabCredito='analise';
           render();
+          setTimeout(function(){
+            var cnpjLimpo=(reg.cnpjChave||'').replace(/\D/g,'');
+            var nomeV=_cli._nomeVerif||'';
+            var endV=_cli._endVerif||'';
+            if(typeof window._montarVerificacoes==='function' && nomeV && cnpjLimpo){
+              window._montarVerificacoes(nomeV, cnpjLimpo, endV);
+            }
+          }, 150);
         };
       }
       var arrowSpan=document.createElement('span');
