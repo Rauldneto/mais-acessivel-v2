@@ -1302,7 +1302,6 @@ function renderAnaliseCredito(){
     stickyStatus.innerHTML=AC.ultimoResultado.stickyStatusHTML;
     stickyStatus.style.color=AC.ultimoResultado.stickyStatusColor||'';
   }
-  sticky.appendChild(stickyStatus);
   var btnSalvar=el('button','ac-cnpj-sticky-btn','ð¾ Salvar');
   btnSalvar.style.cssText='background:#2563eb;';
   btnSalvar.disabled = !(AC.ultimoResultado && AC.ultimoResultado.registro);
@@ -1327,6 +1326,10 @@ function renderAnaliseCredito(){
   sticky.appendChild(btnImportarPDF);
   sticky.appendChild(fileImportInp);
   wrap.appendChild(sticky);
+  var subBar=el('div','');
+  subBar.style.cssText='padding:3px 16px;background:#fffbeb;border-bottom:1px solid #fde68a;font-size:.82em;min-height:20px;';
+  subBar.appendChild(stickyStatus);
+  wrap.appendChild(subBar);
 
   // ======= CARD RESUMO IA =======
   var iaCard=el('div','ac-ia-card');
@@ -1427,9 +1430,9 @@ function renderAnaliseCredito(){
       }
     }
     // Checa imediatamente e tambÃ©m apÃ³s 300ms (aguarda restauraÃ§Ã£o do histÃ³rico)
-    setTimeout(atualizarBadge, 50);
-    setTimeout(atualizarBadge, 400);
-    setTimeout(atualizarBadge, 800);
+    setTimeout(atualizarBadge, 200);
+    setTimeout(atualizarBadge, 600);
+    setTimeout(atualizarBadge, 1500);
 
     fileInp.addEventListener('change', async function(){
       var file=fileInp.files[0];
@@ -2551,14 +2554,15 @@ function renderHistoricoCredito(){
           };
           STATE.tabCredito='analise';
           render();
-          setTimeout(function(){
-            var cnpjLimpo=(reg.cnpjChave||'').replace(/\D/g,'');
-            var nomeV=_cli._nomeVerif||'';
-            var endV=_cli._endVerif||'';
-            if(typeof window._montarVerificacoes==='function' && nomeV && cnpjLimpo){
-              window._montarVerificacoes(nomeV, cnpjLimpo, endV);
-            }
-          }, 150);
+          [150,450,1000].forEach(function(t){
+            setTimeout(function(){
+              var cnpjLimpo=(reg.cnpjChave||'').replace(/\D/g,'');
+              var nomeV=_cli._nomeVerif||'';
+              var endV=_cli._endVerif||'';
+              if(typeof window._montarVerificacoes==='function' && nomeV && cnpjLimpo)
+                window._montarVerificacoes(nomeV,cnpjLimpo,endV);
+            }, t);
+          });
         };
       }
       var arrowSpan=document.createElement('span');
