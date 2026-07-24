@@ -75,11 +75,13 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
     var btn = document.createElement('div');
     btn.id = 'mais-acessivel-btn';
-    btn.title = 'Importar para Mais Acessível';
+    btn.title = 'Importar para Mais Acessível (arraste para mover)';
+
+    var posSalva = null;
+    try { posSalva = JSON.parse(localStorage.getItem('maisAcessivel_btnPos') || 'null'); } catch (e) {}
+
     btn.style.cssText = [
       'position:fixed',
-      'bottom:24px',
-      'right:24px',
       'z-index:999999',
       'background:#e67e22',
       'color:#fff',
@@ -88,19 +90,80 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
       'font-family:Segoe UI,sans-serif',
       'font-size:13px',
       'font-weight:700',
-      'cursor:pointer',
+      'cursor:grab',
       'box-shadow:0 4px 12px rgba(0,0,0,.3)',
       'display:flex',
       'align-items:center',
       'gap:8px',
       'user-select:none',
-      'transition:all .2s'
+      'touch-action:none',
+      'transition:background .2s'
     ].join(';');
+
+    if (posSalva && typeof posSalva.top === 'number' && typeof posSalva.left === 'number') {
+      btn.style.top = posSalva.top + 'px';
+      btn.style.left = posSalva.left + 'px';
+    } else {
+      btn.style.bottom = '24px';
+      btn.style.right = '24px';
+    }
+
     btn.innerHTML = '<span style="font-size:18px">🚚</span> Cotar Frete';
 
-    btn.onmouseover = function() { btn.style.background = '#d35400'; };
-    btn.onmouseout  = function() { btn.style.background = '#e67e22'; };
+    var arrastando = false;
+    var moveu = false;
+    var offsetX = 0, offsetY = 0;
+
+    function onPointerDown(e) {
+      arrastando = true;
+      moveu = false;
+      btn.style.cursor = 'grabbing';
+      btn.style.transition = 'none';
+      var rect = btn.getBoundingClientRect();
+      offsetX = e.clientX - rect.left;
+      offsetY = e.clientY - rect.top;
+      // troca para top/left para poder mover livremente pela tela
+      btn.style.right = 'auto';
+      btn.style.bottom = 'auto';
+      btn.style.left = rect.left + 'px';
+      btn.style.top = rect.top + 'px';
+      document.addEventListener('mousemove', onPointerMove);
+      document.addEventListener('mouseup', onPointerUp);
+      e.preventDefault();
+    }
+
+    function onPointerMove(e) {
+      if (!arrastando) return;
+      moveu = true;
+      var x = e.clientX - offsetX;
+      var y = e.clientY - offsetY;
+      x = Math.max(0, Math.min(window.innerWidth - btn.offsetWidth, x));
+      y = Math.max(0, Math.min(window.innerHeight - btn.offsetHeight, y));
+      btn.style.left = x + 'px';
+      btn.style.top = y + 'px';
+    }
+
+    function onPointerUp() {
+      if (!arrastando) return;
+      arrastando = false;
+      btn.style.cursor = 'grab';
+      btn.style.transition = 'background .2s';
+      document.removeEventListener('mousemove', onPointerMove);
+      document.removeEventListener('mouseup', onPointerUp);
+      if (moveu) {
+        var rect = btn.getBoundingClientRect();
+        try {
+          localStorage.setItem('maisAcessivel_btnPos', JSON.stringify({ top: rect.top, left: rect.left }));
+        } catch (e) {}
+      }
+    }
+
+    btn.addEventListener('mousedown', onPointerDown);
+
+    btn.onmouseover = function() { if (!arrastando) btn.style.background = '#d35400'; };
+    btn.onmouseout  = function() { if (!arrastando) btn.style.background = '#e67e22'; };
     btn.onclick = function() {
+      if (moveu) { moveu = false; return; } // evita disparar a ação ao soltar de um arraste
       // Envia mensagem para o popup via background
       var dados = coletarDados();
       if (!dados.numeroProposta) {
