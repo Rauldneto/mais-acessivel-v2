@@ -6,6 +6,11 @@ function abrirApp(d){
   window.close();
 }
 
+function abrirAppVazio(){
+  chrome.tabs.create({url:APP});
+  window.close();
+}
+
 function importar(dados){
   body.innerHTML='<p class="status">⏳ Buscando contato...</p>';
   var etCep=(dados.etiqueta_cep||'').replace(/\D/g,'');
@@ -57,18 +62,21 @@ chrome.tabs.query({active:true,currentWindow:true},function(tabs){
   var tab=tabs[0];
   if(!tab.url||!tab.url.includes('bling.com.br')){
     body.innerHTML='<p class="status">Abra uma proposta no Bling para importar.</p>'+
-      '<button class="btn btn-sec" onclick="chrome.tabs.create({url:APP});window.close()">Abrir app</button>';
+      '<button class="btn btn-sec" id="btnAbrirApp1">Abrir app</button>';
+    document.getElementById('btnAbrirApp1').onclick=abrirAppVazio;
     return;
   }
   chrome.tabs.sendMessage(tab.id,{action:'getDados'},function(dados){
     if(chrome.runtime.lastError||!dados){
       body.innerHTML='<div class="erro">⚠️ Recarregue a página do Bling (F5) e tente novamente.</div>'+
-        '<button class="btn btn-sec" onclick="window.close()">Fechar</button>';
+        '<button class="btn btn-sec" id="btnFechar">Fechar</button>';
+      document.getElementById('btnFechar').onclick=function(){window.close();};
       return;
     }
     if(!dados.emProposta){
       body.innerHTML='<p class="status">Abra uma <b>proposta</b> no Bling para importar.</p>'+
-        '<button class="btn btn-sec" onclick="chrome.tabs.create({url:APP});window.close()">Abrir app</button>';
+        '<button class="btn btn-sec" id="btnAbrirApp2">Abrir app</button>';
+      document.getElementById('btnAbrirApp2').onclick=abrirAppVazio;
       return;
     }
     var fm=dados.frete_modalidade||'';
@@ -81,7 +89,8 @@ chrome.tabs.query({active:true,currentWindow:true},function(tabs){
         '<div class="det">🚚 '+ft+' &nbsp;📦 '+(dados.itens||[]).length+' item(s)</div>'+
       '</div>'+
       '<button class="btn btn-ok" id="btnImp">🚀 Importar para Cotação</button>'+
-      '<button class="btn btn-sec" onclick="chrome.tabs.create({url:APP});window.close()">Abrir sem importar</button>';
+      '<button class="btn btn-sec" id="btnAbrirApp3">Abrir sem importar</button>';
+    document.getElementById('btnAbrirApp3').onclick=abrirAppVazio;
     document.getElementById('btnImp').onclick=function(){
       this.disabled=true;this.textContent='⏳ Importando...';
       importar(dados);
