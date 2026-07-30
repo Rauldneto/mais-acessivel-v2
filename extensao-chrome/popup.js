@@ -1,18 +1,34 @@
 var APP='https://rauldneto.github.io/mais-acessivel-app/';
 var body=document.getElementById('body');
 
+// Div onde o conteudo que muda de acordo com o contexto (Bling ou nao,
+// proposta aberta ou nao) e renderizado. O botao "Abrir app" fica fora
+// dela, sempre visivel, independente do contexto.
+var dynamicWrap=document.createElement('div');
+
 function abrirApp(d){
   chrome.tabs.create({url:APP+'#bling='+encodeURIComponent(JSON.stringify(d))});
   window.close();
 }
 
-function abrirAppVazio(){
-  chrome.tabs.create({url:APP});
+// Atalho fixo: sempre abre o app numa janela nova, sem depender de
+// estar numa proposta do Bling.
+function abrirAppNovaJanela(){
+  chrome.windows.create({url:APP});
   window.close();
 }
 
+function montarBotaoAbrirAppFixo(){
+  var btn=document.createElement('button');
+  btn.className='btn btn-sec';
+  btn.id='btnAbrirAppFixo';
+  btn.textContent='🪟 Abrir app';
+  btn.onclick=abrirAppNovaJanela;
+  return btn;
+}
+
 function importar(dados){
-  body.innerHTML='<p class="status">⏳ Buscando contato...</p>';
+  dynamicWrap.innerHTML='<p class="status">⏳ Buscando contato...</p>';
   var etCep=(dados.etiqueta_cep||'').replace(/\D/g,'');
   var etEnd=[dados.etiqueta_endereco,dados.etiqueta_numero,dados.etiqueta_complemento,
     dados.etiqueta_bairro,dados.etiqueta_municipio+' - '+dados.etiqueta_uf]
@@ -58,39 +74,36 @@ function importar(dados){
   });
 }
 
+// Monta a estrutura fixa da tela: area dinamica + botao "Abrir app" sempre visivel
+body.innerHTML='';
+body.appendChild(dynamicWrap);
+body.appendChild(montarBotaoAbrirAppFixo());
+
 chrome.tabs.query({active:true,currentWindow:true},function(tabs){
   var tab=tabs[0];
   if(!tab.url||!tab.url.includes('bling.com.br')){
-    body.innerHTML='<p class="status">Abra uma proposta no Bling para importar.</p>'+
-      '<button class="btn btn-sec" id="btnAbrirApp1">Abrir app</button>';
-    document.getElementById('btnAbrirApp1').onclick=abrirAppVazio;
+    dynamicWrap.innerHTML='<p class="status">Abra uma proposta no Bling para importar.</p>';
     return;
   }
   chrome.tabs.sendMessage(tab.id,{action:'getDados'},function(dados){
     if(chrome.runtime.lastError||!dados){
-      body.innerHTML='<div class="erro">⚠️ Recarregue a página do Bling (F5) e tente novamente.</div>'+
-        '<button class="btn btn-sec" id="btnFechar">Fechar</button>';
-      document.getElementById('btnFechar').onclick=function(){window.close();};
+      dynamicWrap.innerHTML='<div class="erro">⚠️ Recarregue a página do Bling (F5) e tente novamente.</div>';
       return;
     }
     if(!dados.emProposta){
-      body.innerHTML='<p class="status">Abra uma <b>proposta</b> no Bling para importar.</p>'+
-        '<button class="btn btn-sec" id="btnAbrirApp2">Abrir app</button>';
-      document.getElementById('btnAbrirApp2').onclick=abrirAppVazio;
+      dynamicWrap.innerHTML='<p class="status">Abra uma <b>proposta</b> no Bling para importar.</p>';
       return;
     }
     var fm=dados.frete_modalidade||'';
     var ft=(fm==='R'||fm==='r')?'CIF':'FOB';
-    body.innerHTML=
+    dynamicWrap.innerHTML=
       '<div class="info">'+
         '<div class="num">Proposta Nº '+dados.numeroProposta+'</div>'+
         '<div class="det">👤 '+(dados.nomeVendedor||'—')+'</div>'+
         '<div class="det">💰 R$ '+(dados.totalOrcamento||'0')+' &nbsp;⚖️ '+(dados.pesoBruto||'0')+' kg</div>'+
         '<div class="det">🚚 '+ft+' &nbsp;📦 '+(dados.itens||[]).length+' item(s)</div>'+
       '</div>'+
-      '<button class="btn btn-ok" id="btnImp">🚀 Importar para Cotação</button>'+
-      '<button class="btn btn-sec" id="btnAbrirApp3">Abrir sem importar</button>';
-    document.getElementById('btnAbrirApp3').onclick=abrirAppVazio;
+      '<button class="btn btn-ok" id="btnImp">🚛 Cotação de Frete</button>';
     document.getElementById('btnImp').onclick=function(){
       this.disabled=true;this.textContent='⏳ Importando...';
       importar(dados);
