@@ -69,6 +69,14 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 (function() {
   if (!window.location.href.includes('bling.com.br')) return;
 
+  // Garante que o botão nunca apareça em impressões (NF, DANFE, etc.)
+  if (!document.getElementById('mais-acessivel-print-style')) {
+    var printStyle = document.createElement('style');
+    printStyle.id = 'mais-acessivel-print-style';
+    printStyle.textContent = '@media print { #mais-acessivel-btn { display: none !important; } }';
+    (document.head || document.documentElement).appendChild(printStyle);
+  }
+
   // Aguarda a página carregar
   function injetarBotao() {
     if (document.getElementById('mais-acessivel-btn')) return;
