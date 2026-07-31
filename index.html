@@ -653,9 +653,20 @@ setInterval(function() {
 }, 30000);
 
 // ââ FunÃ§Ãµes para salvar no localStorage + Firebase ââ
-function persistSaved(){
+function persistSaved(idAlvo){
   try { localStorage.setItem('maisacessivel_saved', JSON.stringify(SAVED)); } catch(e){}
-  // Salva cada cotacao individualmente no Firebase para evitar conflito entre usuarios
+  if(idAlvo!==undefined && idAlvo!==null){
+    // Grava so a cotacao que realmente mudou. Antes isto disparava uma
+    // gravacao para TODAS as cotacoes do historico a cada salvamento
+    // (dezenas de requisicoes simultaneas), o que podia fazer a gravacao
+    // da cotacao atual se perder na fila.
+    var alvo=SAVED.find(function(s){ return s && String(s.id)===String(idAlvo); });
+    if(alvo){
+      fbPut('saved/'+String(alvo.id).replace(/[^a-zA-Z0-9_-]/g,'_'), alvo);
+    }
+    return;
+  }
+  // Sem id especifico (uso legado): grava tudo.
   SAVED.forEach(function(s){
     if(s && s.id){
       fbPut('saved/'+String(s.id).replace(/[^a-zA-Z0-9_-]/g,'_'), s);
@@ -2760,7 +2771,7 @@ function salvarCotacao(){
   if(idx>=0){SAVED[idx]=nova;} else {SAVED.unshift(nova);}
   // MantÃ©m mÃ¡ximo 30 cotaÃ§Ãµes
   if(SAVED.length>30) SAVED.splice(30);
-  persistSaved();
+  persistSaved(num);
   alert('CotaÃ§Ã£o NÂº '+num+' salva com sucesso!');
   STATE._lastSavedCotacao=nova;
   // Atualiza botÃ£o imprimir no header
@@ -3833,7 +3844,7 @@ function mostrarRevisaoPdfCotacao(dados, confiavel){
       SAVED.unshift(atualizado);
     }
     if(SAVED.length>30) SAVED.splice(30);
-    persistSaved();
+    persistSaved(id);
     document.body.removeChild(overlay);
     alert('Cota\u00e7\u00e3o N\u00ba '+id+' recuperada! Os dados j\u00e1 foram carregados na tela de cota\u00e7\u00e3o.');
     // Carrega a cotacao recem-atualizada diretamente na tela, para o
